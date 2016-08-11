@@ -1,9 +1,7 @@
-# fortran
-
--LOCALLY DO THIS:
+# LOCALLY
 gfortran -o sus -fopenmp main.f03 SelfConsistent.f03 Energy.f03 Susceptibility.f03 Utils.f03 -llapack -lblas -lfftw3 && ./sus
 
--ON HYALITE DO THIS:
+# HYALITE
 gfortran -o sus -fopenmp main.f03 SelfConsistent.f03 Energy.f03 Susceptibility.f03 Utils.f03 -L$LAPACK_DIR -L$FFTWDIR -L$BLASDIR -llapack -lfftw3 -lblas
 
 ssh -X k58w857@hyalite.rcg.montana.edu
