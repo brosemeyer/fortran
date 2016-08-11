@@ -21,13 +21,13 @@ Pk(:) = cmplx(0.0,0.0)
 Fr_b(:) = cmplx(1.0,0.0)
 Neigs = Nc
 if (flags(5)<0) then
- 	Neigs = Nc-1
- 	Fr_b(:) =0.0
- 	Fr_b(1) = 1
+ 	Neigs = Nc-2
+ 	Fr_b(:) = 0.0
+	! Fr_b(1:2) = 1e3
  	call Fourier_q(Pk,cmplx(Fr_b,0.0,kind=8),NN,NN,Nci(1,:),1)
  	Pk = Pk/dble(NN)
 	Fr_b(:) = 1.0
-	Fr_b(1:512) = 0.0
+	Fr_b(1:10) = 0.0
 end if
 call Fourier_q(Fk,cmplx(Fr*Fr_b,0.0,KIND=8),NN,NN,Nci(1,:),1)
 Fk = Fk/dble(NN)

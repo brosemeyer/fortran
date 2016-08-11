@@ -1,21 +1,11 @@
-!~ gfortran -o sus -fopenmp SUS_2.f03 -llapack -lblas -lfftw3 && ./sus
-!~ gfortran -o sus -fopenmp SUS_3.f03 -llapack -lblas -lfftw3
-!~ gfortran -o sus -fopenmp SUS_3.f03 -L$LAPACK_DIR -L$BLASDIR -L$FFTWDIR -llapack -lblas -lfftw3
-!~ export OMP_NUM_THREADS=13
-!~ gfortran -o sus -fopenmp SUS_paper.f03 -L$LAPACK_DIR -L$FFTWDIR -llapack -l$BLASLIB -l$FFTWLIB
 program MAIN
 implicit none
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!  NOTES !!!!!!!!!!!!!!!!!!!!!!!
-!   NN must be odd
-!	Ny must be even
-!	Lmin and Lmax > 0
-!	Order Parameter is real
+
 ! TODO clean up PI usage
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 REAL(8), parameter :: PI=3.141592654
 !!!!!!!!!!!!!!!INTEGERS
-INTEGER, parameter :: Nb=1, Nt=10, NL=1, NN = 256, N_norm = 1000, NE = 101
+INTEGER, parameter :: Nb=1, Nt=10, NL=1, NN = 512, N_norm = 1000, NE = 101
 !!!!!!!!!!!!!!!BOUNDS
 INTEGER, parameter :: Lmin = 0, Lmax = 400
 REAL(8), parameter :: t_min = 0.05, t_max = 0.45
@@ -35,7 +25,7 @@ INTEGER, DIMENSION(9) :: flags = (/1, & !	1=S wave, 2=D wave
 								   0, & !	1=calculate real part, 0=no
 								   0, & !	1=calculate relaxation rate, 0=no
 								   0, & !	1=calculate DOS, 0=no save
-								   1, & !	0=0 DW, 1=2 DW, 2=4 DW, 3=6 DW, 4=8 DW, 5=10 DW
+								   -1, & !	0=0 DW, 1=2 DW, 2=4 DW, 3=6 DW, 4=8 DW, 5=10 DW
 								   1, & !	1=Calculate self consistent, 0=use data file guess
 								   0, & !	1=Calculate Homogeneous, 0=no homogeneous
 								   0, &	!	1=Calculate Free energy, 0=no free energy
