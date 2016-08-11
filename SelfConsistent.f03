@@ -2,7 +2,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine self_consistent(Fr,Kx,Ky,rr,NN,Ny,t,b,D0,flags,phase, &
 						   VECS, EIGS, sc_const00,it, ib, &
-						   success,w_len,wr_len,wi_len,Nc,Nci,NNc,tol,max_it)
+						   success,w_len,wr_len,wi_len,Nc,Nci,NNc,tol,max_it,E_cut)
 implicit none
 REAL(8), parameter :: PI=3.141592654
 integer :: ii, i, j, k, jj, Ny,j_it,NNc, max_it, badness, it, ib
@@ -10,7 +10,7 @@ integer :: NN, st, last_it, success
 INTEGER, DIMENSION(Ny) :: w_len, wr_len, wi_len, Nc, Neigs
 INTEGER, DIMENSION(Ny,NNc) :: Nci
 integer, dimension(9) :: flags
-REAL(8) :: t, b, D0, sc_const00, phase, tol
+REAL(8) :: t, b, D0, sc_const00, phase, tol, E_cut
 REAL(8), DIMENSION(Ny) :: Ky
 REAL(8), DIMENSION(NN) :: Kx, Q, rr, Fr, Fr2, Fr_b
 REAL(8), DIMENSION(Ny,2*NNc) :: EIGS
@@ -21,11 +21,11 @@ Pk(:) = cmplx(0.0,0.0)
 Fr_b(:) = cmplx(1.0,0.0)
 Neigs = Nc
 if (flags(5)<0) then
-!~ 	Neigs = Nc-1
-!~ 	Fr_b(:) =0.0
-!~ 	Fr_b(1) = 1
-!~ 	call Fourier_q(Pk,cmplx(Fr_b,0.0,kind=8),NN,NN,Nci(1,:),1)
-!~ 	Pk = Pk/dble(NN)
+ 	Neigs = Nc-1
+ 	Fr_b(:) =0.0
+ 	Fr_b(1) = 1
+ 	call Fourier_q(Pk,cmplx(Fr_b,0.0,kind=8),NN,NN,Nci(1,:),1)
+ 	Pk = Pk/dble(NN)
 	Fr_b(:) = 1.0
 	Fr_b(1:512) = 0.0
 end if
@@ -41,7 +41,7 @@ do while(st == 0)
 	j_it = j_it+1
 	badness = 0
 	call get_new_profile(Fk2(1:NN/2+1),VECS,t,b,EIGS,Fk,Neigs,Pk, &
-						 Kx,Ky,D0,NN,Ny,flags,phase,w_len,wr_len,wi_len,Nc,Nci,NNc,badness)
+						 Kx,Ky,D0,NN,Ny,flags,phase,w_len,wr_len,wi_len,Nc,Nci,NNc,badness,E_cut)
 	Fk2(NN/2+2:NN) = conjg(Fk2(NN/2:2:-1))
 	Fk2 = Fk2/sc_const00
 	call Fourier_q(Frc,Fk2,NN,NN,Nci(1,:),2)
@@ -49,10 +49,8 @@ do while(st == 0)
 	call Fourier_q(Fk2,cmplx(Fr2,0.0,kind=8),NN,NN,Nci(1,:),1)
 	Fk2 = Fk2/dble(NN)
 
-	write(*,*) sum(abs(Fr - Fr2))/(NN)
 	if (last_it == 0) then
 		if (sum(abs(Fr - Fr2))/(NN) < tol .and. badness == 0) then  !!!!CONVERGENCE
-			write(*,*) 'convergence!'
 			success = 1
 		else if (j_it > max_it) then
 			write(*,*) 'ABORT SELF CONSISTENCY:', t, b, 'MAX ITERATIONS'
@@ -85,13 +83,13 @@ end subroutine self_consistent
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine self_consistent_00(Kx,Ky,NN,Ny,D0, flags,phase,sc_const00, &
-							  w_len,wr_len,wi_len,Nc,Nci,NNc)
+							  w_len,wr_len,wi_len,Nc,Nci,NNc,E_cut)
 
 implicit none
 REAL(8), parameter :: PI=3.141592654
 integer :: Ny, NN, i, NNc, badness
 integer, dimension(9) :: flags
-REAL(8) :: D0, sc_const00, phase
+REAL(8) :: D0, sc_const00, phase, E_cut
 REAL(8), DIMENSION(Ny) :: Ky
 COMPLEX(8), DIMENSION(NN) :: Fk, Pk
 COMPLEX(8), DIMENSION(NN/2+1) :: Fk2
@@ -119,7 +117,7 @@ Fk(:) = cmplx(0.0,0.0)
 Pk = Fk
 Fk(1) = cmplx(1.0,0.0)
 call get_new_profile(Fk2,VECS,dble(0),dble(0),EIGS,Fk,Nc,Pk, &
-					 Kx,Ky,D0,NN,Ny,flags,phase,w_len,wr_len,wi_len,Nc,Nci,NNc,badness)
+					 Kx,Ky,D0,NN,Ny,flags,phase,w_len,wr_len,wi_len,Nc,Nci,NNc,badness,E_cut)
 
 sc_const00 = abs(Fk2(1))
 
@@ -127,13 +125,13 @@ end subroutine self_consistent_00
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE get_new_profile(Fk2,VECS,t,b,EIGS_pass,Fk,Neigs,Pk, &
-						   Kx,Ky,D0,NN,Ny,flags,phase,w_len,wr_len,wi_len,Nc,Nci,NNc,badness)
+						   Kx,Ky,D0,NN,Ny,flags,phase,w_len,wr_len,wi_len,Nc,Nci,NNc,badness,E_cut)
 IMPLICIT NONE
 REAL(8), PARAMETER :: PI=3.141592654
 INTEGER :: Ny, NN, i, j, jj, NNc, jjm, j_x, badness
 INTEGER, DIMENSION(Ny) :: w_len, wr_len, wi_len, Nc, Neigs
 INTEGER, DIMENSION(Ny,NNc) :: Nci
-REAL(8) :: t, b, D0, phase
+REAL(8) :: t, b, D0, phase, E_cut
 REAL(8), DIMENSION(NN) :: Kx
 REAL(8), DIMENSION(Ny) :: Ky
 COMPLEX(8), DIMENSION(NN/2+1) :: Fk2
@@ -179,7 +177,7 @@ do i=1,Ny
 		WORK(1:w_len(i),i), w_len(i), RWORK(1:wr_len(i),i), wr_len(i), IWORK(1:wi_len(i),i), wi_len(i), INFO(i))
 
   do j = 1,Nc(i)
-    if (EIGS(i,j) < 0) then
+    if (EIGS(i,j) < 0 .or. EIGS(i,j) > E_cut+0.1) then
       write(*,*) "BAD EIGENVALUE!!!!!!!!! ", EIGS(i,j)
     end if
   end do

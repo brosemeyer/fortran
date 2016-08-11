@@ -15,7 +15,7 @@ implicit none
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 REAL(8), parameter :: PI=3.141592654
 !!!!!!!!!!!!!!!INTEGERS
-INTEGER, parameter :: Nb=1, Nt=10, NL=1, NN = 512, N_norm = 1000, NE = 101
+INTEGER, parameter :: Nb=1, Nt=10, NL=1, NN = 256, N_norm = 1000, NE = 101
 !!!!!!!!!!!!!!!BOUNDS
 INTEGER, parameter :: Lmin = 0, Lmax = 400
 REAL(8), parameter :: t_min = 0.05, t_max = 0.45
@@ -33,13 +33,13 @@ INTEGER, parameter :: Ny = 2*int(NN*sqrt(1+E_cut*D0)/(bzones*2*PI))
 !!!!!!!!!!!!!!!FLAGS
 INTEGER, DIMENSION(9) :: flags = (/1, & !	1=S wave, 2=D wave
 								   0, & !	1=calculate real part, 0=no
-								   1, & !	1=calculate relaxation rate, 0=no
+								   0, & !	1=calculate relaxation rate, 0=no
 								   0, & !	1=calculate DOS, 0=no save
 								   1, & !	0=0 DW, 1=2 DW, 2=4 DW, 3=6 DW, 4=8 DW, 5=10 DW
 								   1, & !	1=Calculate self consistent, 0=use data file guess
 								   0, & !	1=Calculate Homogeneous, 0=no homogeneous
 								   0, &	!	1=Calculate Free energy, 0=no free energy
-								   1  &	!	1=Calculate Magnetization, 0=no Magnetization
+								   0  &	!	1=Calculate Magnetization, 0=no Magnetization
 								   /)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 INTEGER, DIMENSION(NL) :: L_sn
@@ -133,7 +133,7 @@ CONTAINS
 		  SUS0(j,i,:,:) = 0.0
 		else
 		call self_consistent(DD(it,ib,:), Kx, Ky, rr, NN, Ny, TT(it), HH(ib), D0, flags,phase,VECS, EIGS, sc_const00, &
-													it, ib, success,w_len,wr_len,wi_len,Nc,Nci,NNc,tol,max_it)
+													it, ib, success,w_len,wr_len,wi_len,Nc,Nci,NNc,tol,max_it,E_cut)
 		Ep(:,:,2) = D0*(EIGS(:,1:NNc) + HH(ib))
 		Ep(:,:,1) = D0*(EIGS(:,1:NNc) - HH(ib))
 		Fp = (exp(Ep/(TT(it)*D0))+1)**(-1)
@@ -205,7 +205,7 @@ CONTAINS
 	 NNc = maxval(Nc,dim=1)
 	 !initialize sc
 	 call self_consistent_00(kx,Ky,NN,Ny,D0,flags,phase,sc_const00, &
-	 							w_len,wr_len,wi_len,Nc,Nci(:,1:NNc),NNc)
+	 							w_len,wr_len,wi_len,Nc,Nci(:,1:NNc),NNc,E_cut)
 	call system('rm -rf DOS')
 	call system('rm -rf SUS')
 	call system('rm -rf RELAXATION')
