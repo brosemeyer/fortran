@@ -3,13 +3,13 @@ implicit none
 
 ! TODO clean up PI usage
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-REAL(8), parameter :: PI=3.141592654
+REAL(8), parameter :: PI=4*atan(1.0)
 !!!!!!!!!!!!!!!INTEGERS
-INTEGER, parameter :: Nb=1, Nt=10, NL=1, NN = 512, N_norm = 1000, NE = 101
+INTEGER, parameter :: Nb=1, Nt=3, NL=1, NN = 512, N_norm = 1000, NE = 101
 !!!!!!!!!!!!!!!BOUNDS
 INTEGER, parameter :: Lmin = 0, Lmax = 400
-REAL(8), parameter :: t_min = 0.05, t_max = 0.45
-REAL(8), parameter :: b_min = 0.3, b_max = 0.8
+REAL(8), parameter :: t_min = 0.4, t_max = 0.45
+REAL(8), parameter :: b_min = 0.0, b_max = 0.8
 REAL(8), parameter :: E_cut = 5, r_range = 150
 !!!!!!!!!!!!!!!SELF CONSISTENCY
 INTEGER, parameter :: max_it = 200
@@ -21,27 +21,28 @@ REAL(8), parameter :: eta = 2.5e-3
 !!!!!!!!!!!!!!!COMPUTED
 INTEGER, parameter :: Ny = 2*int(NN*sqrt(1+E_cut*D0)/(bzones*2*PI))
 !!!!!!!!!!!!!!!FLAGS
-INTEGER, DIMENSION(9) :: flags = (/1, & !	1=S wave, 2=D wave
+INTEGER, DIMENSION(10) :: flags = (/2, & !	1=S wave, 2=D wave
 								   0, & !	1=calculate real part, 0=no
 								   0, & !	1=calculate relaxation rate, 0=no
-								   0, & !	1=calculate DOS, 0=no save
+								   1, & !	1=calculate DOS, 0=no save
 								   -1, & !	0=0 DW, 1=2 DW, 2=4 DW, 3=6 DW, 4=8 DW, 5=10 DW
 								   1, & !	1=Calculate self consistent, 0=use data file guess
 								   0, & !	1=Calculate Homogeneous, 0=no homogeneous
 								   0, &	!	1=Calculate Free energy, 0=no free energy
-								   0  &	!	1=Calculate Magnetization, 0=no Magnetization
+								   0, &	!	1=Calculate Magnetization, 0=no Magnetization
+									 1  & ! 1=Calculate Current, 0=no Current
 								   /)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 INTEGER, DIMENSION(NL) :: L_sn
 REAL(8), DIMENSION(NN,2) :: chi_norm
 REAL(8), DIMENSION(NN) :: Kx, q0, rr
 REAL(8), DIMENSION(Ny) :: Ky
-INTEGER, DIMENSION(Ny) :: Nc, w_len, wr_len, wi_len
+INTEGER, DIMENSION(Ny) :: Nc, w_len, wr_len, wi_len, Neigs
 INTEGER, DIMENSION(Ny,NN) :: Nci
 LOGICAL, DIMENSION(NN/2+1) :: msk_space
 REAL(8), DIMENSION(Nt) :: TT
 REAL(8), DIMENSION(Nb) :: HH
-REAL(8), DIMENSION(Nt,Nb,NN) :: DD
+REAL(8), DIMENSION(Nt,Nb,NN) :: DD, Current
 REAL(8), DIMENSION(Nt,Nb,3) :: Free_E
 REAL(8), DIMENSION(Nt,Nb,NL,5) :: SUS0
 REAL(8), DIMENSION(Nt,Nb,NL) :: rel_time
@@ -74,6 +75,7 @@ do it=1,Nt
 	 if (Nb == 1) then
 		 HH(1) = b_min
 	 end if
+	 ! do calculations
 	 call calculations()
  end do
  if (Nb /= 1) then
@@ -123,7 +125,7 @@ CONTAINS
 		  SUS0(j,i,:,:) = 0.0
 		else
 		call self_consistent(DD(it,ib,:), Kx, Ky, rr, NN, Ny, TT(it), HH(ib), D0, flags,phase,VECS, EIGS, sc_const00, &
-													it, ib, success,w_len,wr_len,wi_len,Nc,Nci,NNc,tol,max_it,E_cut)
+													it, ib, success,w_len,wr_len,wi_len,Nc,Neigs,Nci,NNc,tol,max_it,E_cut)
 		Ep(:,:,2) = D0*(EIGS(:,1:NNc) + HH(ib))
 		Ep(:,:,1) = D0*(EIGS(:,1:NNc) - HH(ib))
 		Fp = (exp(Ep/(TT(it)*D0))+1)**(-1)
@@ -143,6 +145,9 @@ CONTAINS
 			SUS0(it,ib,:,3) = Mag(1,1)
 			SUS0(it,ib,:,4) = Mag(NN/4,1)
 			SUS0(it,ib,:,5) = Mag(1,2)
+		end if
+		if (flags(10) == 1) then
+			call current_y(TT(it),HH(ib),Current(it,ib,:),Ky,NN,Ny,it,ib,rr,Nc,Neigs,NNc,Ep,Fp,Uxp,Vxp)
 		end if
 		if (flags(3) == 1) then
 			do i=1,NL

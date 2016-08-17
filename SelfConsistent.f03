@@ -2,11 +2,11 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine self_consistent(Fr,Kx,Ky,rr,NN,Ny,t,b,D0,flags,phase, &
 						   VECS, EIGS, sc_const00,it, ib, &
-						   success,w_len,wr_len,wi_len,Nc,Nci,NNc,tol,max_it,E_cut)
+						   success,w_len,wr_len,wi_len,Nc,Neigs,Nci,NNc,tol,max_it,E_cut)
 implicit none
 REAL(8), parameter :: PI=3.141592654
 integer :: ii, i, j, k, jj, Ny,j_it,NNc, max_it, badness, it, ib
-integer :: NN, st, last_it, success
+integer :: NN, st, last_it, success, N_vac
 INTEGER, DIMENSION(Ny) :: w_len, wr_len, wi_len, Nc, Neigs
 INTEGER, DIMENSION(Ny,NNc) :: Nci
 integer, dimension(9) :: flags
@@ -21,13 +21,14 @@ Pk(:) = cmplx(0.0,0.0)
 Fr_b(:) = cmplx(1.0,0.0)
 Neigs = Nc
 if (flags(5)<0) then
- 	Neigs = Nc-2
+	N_vac = 2
+ 	Neigs = Nc-N_vac
  	Fr_b(:) = 0.0
-	! Fr_b(1:2) = 1e3
+	Fr_b(1:N_vac) = 1e3
  	call Fourier_q(Pk,cmplx(Fr_b,0.0,kind=8),NN,NN,Nci(1,:),1)
  	Pk = Pk/dble(NN)
 	Fr_b(:) = 1.0
-	Fr_b(1:10) = 0.0
+	Fr_b(1:N_vac) = 0.0
 end if
 call Fourier_q(Fk,cmplx(Fr*Fr_b,0.0,KIND=8),NN,NN,Nci(1,:),1)
 Fk = Fk/dble(NN)
@@ -156,6 +157,7 @@ Fk_sum(:,:) = cmplx(0.0,0.0)
 MAT(:,:,:) = cmplx(0.0,0.0)
 !$OMP PARALLEL DO SCHEDULE(DYNAMIC)
 do i=1,Ny
+	if (Neigs(i) > 0) then
 	do j=1,Nc(i)
 		MAT(j,i,j) = (Kx(Nci(i,j))**2 + Ky(i)**2 - 1)/D0
 		do jj=1,Nc(i)
@@ -176,7 +178,7 @@ do i=1,Ny
 		M(i), EIGS(i,1:2*Nc(i)), VECS(1:2*Nc(i),i,1:2*Nc(i)), 2*Nc(i), ISUPPZ(i), &
 		WORK(1:w_len(i),i), w_len(i), RWORK(1:wr_len(i),i), wr_len(i), IWORK(1:wi_len(i),i), wi_len(i), INFO(i))
 
-  do j = 1,Nc(i)
+  do j = 1,Neigs(i)
     if (EIGS(i,j) < 0 .or. EIGS(i,j) > E_cut+0.1) then
       write(*,*) "BAD EIGENVALUE!!!!!!!!! ", EIGS(i,j)
     end if
@@ -199,6 +201,7 @@ do i=1,Ny
 		end do
 		end do
 	end do
+end if
 end do
 !$OMP END PARALLEL DO
 Fk2 = sum(Fk_sum,dim=2)
